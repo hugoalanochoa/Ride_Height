@@ -43,6 +43,7 @@
 #include "X-NUCLEO-53L0A1.h"
 #include <math.h>
 #include <stdlib.h>
+#include "util.h"
 
 /*
 **====================================================================================
@@ -52,7 +53,7 @@
 
 #define REF_DIST 0.300f
 #define M_PI_F 3.14159265358979323846f
-#define DEFAULT_VALUES  1
+#define DEFAULT_CAL_DIST_VALUES  1      /**< If set , Distance calibration values are loaded with default values */
 
 /*
 **====================================================================================
@@ -60,10 +61,14 @@
 **====================================================================================
 */
 
+/**
+ * Sensor command type
+ */
+
 typedef struct
 {
   uint8_t regadd;       /**< Register address */
-  uint8_t data;
+  uint8_t data;         /**< data */
 
 }SnrCmd_T;
 
@@ -74,7 +79,7 @@ typedef struct
 **====================================================================================
 */
 
-const SnrCmd_T SnrInitSeq [] =
+const SnrCmd_T SnrInitSeq [] =  /**< Initialization command sequence */
     {
         {0x10, 0x06},    /**< Optional - Set integration time increase over default is normal */
         {0x11, 0x34},    /**< Optional - Set measurement period, default normally OK */
@@ -122,15 +127,29 @@ const SnrCmd_T SnrInitSeq [] =
 ** Private function prototypes
 **====================================================================================
 */
+
+/**
+** Reads a single sensor register
+**
+** \details
+**
+** \return    Data read into the given register
+**************************************************************************************/
 uint8_t
 read_reg (
-          uint8_t reg);
+          uint8_t reg);   /**< Sensor Register to read */
 
-
+/**
+** Writes a sigle sensor register
+**
+** \details
+**
+** \return    Nothing
+**************************************************************************************/
 void
 write_reg (
-           uint8_t reg,
-           uint8_t data);
+           uint8_t reg,         /**< register to write */
+           uint8_t data);       /**< data to write */
 
 
 /*
@@ -229,7 +248,7 @@ return status;
 **
 ** \details
 **
-** \return    Nothing
+** \return    Measured distance in mm
 **************************************************************************************/
 uint32_t
 SensorMeasure (
@@ -278,7 +297,13 @@ SensorMeasure (
 
 }
 
-
+/**
+** Measure distance using phase correction
+**
+** \details
+**
+** \return    measured distance in mm
+**************************************************************************************/
 uint32_t SensorMeasureF (void)
 {
   float distance;
@@ -318,6 +343,11 @@ uint32_t SensorMeasureF (void)
       }
 
     distance*=1000;
+
+    NOT_USED(data_invalid);
+    NOT_USED(inter);
+    NOT_USED(prec);
+
     return (uint32_t)(distance);
 }
 
@@ -327,7 +357,7 @@ uint32_t SensorMeasureF (void)
 ** Magnitude Calibration Procedure
 **
 ** \details
-**
+**  No action for the user us required
 ** \return    Nothing
 **************************************************************************************/
 void
@@ -368,6 +398,14 @@ SensorMagitudeCal (
 
 }
 
+
+/**
+** Performs crosstalk calibration procedure
+**
+** \details
+** requires that user blocks the photo diode from receiving any light
+** \return    Nothing
+**************************************************************************************/
 void
 SensorCrossTalkCal (
                     void)
@@ -445,6 +483,14 @@ SensorCrossTalkCal (
 
 }
 
+
+/**
+** Performs distance calibration procedure,
+**
+** \details
+**  this function requires that user place an object to a predefine distance: REF_DIST
+** \return    Nothing
+**************************************************************************************/
 void
 SensorDistanceCal (
                    void)
@@ -487,10 +533,10 @@ SensorDistanceCal (
   bytes[1]= (uint8_t)((int)phase_sum & 0x00FF);           // Write phase offset LSB
 
 
-
+#if DEFAULT_CAL_DIST_VALUES == 1
   bytes[0]=0x12;
   bytes[1]=0x03;
-
+#endif
 
 
   write_reg(0x2F, bytes[0]);
@@ -502,67 +548,18 @@ SensorDistanceCal (
 }
 
 
-
-void
-SensorDistCal2 (
-                void)
-{
-  uint8_t data;
-  uint8_t bytes[2];
-  double phase_sum = 0.0;
-  uint8_t n;
-  uint16_t timeout = 0xFFFFu;
-  float offset;
-  uint8_t off_lsb, off_msb;
-  data = 0u;
-  SensorWrite (0x2f, &data, 1);           //DIST_CAL_OFF_MSB
-  SensorWrite (0x30, &data, 1);           //DIST_CAL_OFF_MSB
-
-  HAL_Delay (100);
-
-  for (n = 0; n < 100; ++n)
-    {
-
-      /*signal start*/
-      ISL_SS(0u);
-      while (timeout > 0u)
-        {
-          timeout--;
-          if (HAL_GPIO_ReadPin (GPIOA, GPIO_PIN_7) == 0u)
-            {
-              break;
-            }
-        }
-      SensorRead (0xD1, &bytes[0], 1); /*MSB */
-      SensorRead (0xD2, &bytes[1], 1); /*LSB */
-
-      phase_sum += Bytes2Double2U (bytes[0], bytes[1]); /*convert to double*/
-      ISL_SS(1u);
-    }
-  phase_sum = phase_sum / 100;
-  phase_sum /= 2000;        //convert to meters
-
-  offset = (phase_sum - REF_DIST) * 2000;
-
-  off_lsb = (0xFF & (uint16_t) offset);
-  off_msb = (0xFF00 & (uint16_t) offset) >> 8;
-
-  SensorWrite (0x2f, &off_msb, 1u); //Clear flag
-  SensorWrite (0x30, &off_lsb, 1u); //Clear flag
-
-}
-
-
-
-
-
-
+/**
+** Method converts 3 signed bytes in format {Exp,MSB,LSB} to a double
+**
+** \details
+**
+** \return    Converted Double
+**************************************************************************************/
 double
 Bytes2Double3S (
                 uint8_t exp,
                 uint8_t msb,
                 uint8_t lsb)
-// method converts 3 signed bytes in format {Exp,MSB,LSB} to a double
 {
   double result = 0;
   int iMantissa = 0;
@@ -584,24 +581,35 @@ Bytes2Double3S (
   return result;
 }
 
-
+/**
+** Method converts bytes in format {MSB,LSB} to a double
+**
+** \details
+**
+** \return    Nothing
+**************************************************************************************/
 double
 Bytes2Double2U (
                 uint8_t msb,
                 uint8_t lsb)
-// method converts bytes in format {MSB,LSB} to a double
 {
   double result = 0;
   result = (double) (ushort) (((int) (msb) << 8) | (int) (lsb));
   return result;
 }
 
-
+/**
+** Method converts a double to 3 bytes with signed mantissa {Exp,MSB,LSB}
+**
+** \details
+**
+** \return    Nothing
+**************************************************************************************/
  void
 Double2Bytes3S (
-                double dNum,
-                uint8_t* baResult)
-// method converts a double to 3 bytes with signed mantissa {Exp,MSB,LSB}
+                double dNum,            /**< Double number to convert */
+                uint8_t* baResult)      /**< resulting bytes */
+//
 {
   double dNumLog = 0;
   uint8_t a;
@@ -641,32 +649,52 @@ Double2Bytes3S (
 }
 
 
-
+/**
+** Method converts a double to 2 bytes {MSB,LSB}
+**
+** \details
+**
+** \return    Nothing
+**************************************************************************************/
 void
 Double2Bytes2U (
-                double dNum,
-                uint8_t* baResult)
-// method converts a double to 2 bytes {MSB,LSB}
+                double dNum,            /**< double number to convert */
+                uint8_t* baResult)      /**< Resulting bytes {MSB = baResult[0] */
+
 {
   int iNum = (int) dNum;
   baResult[0] = (uint8_t) ((iNum & 0x0000FF00) >> 8);
   baResult[1] = (uint8_t) (iNum & 0x000000FF);
 }
 
-
+/**
+** Reads a single sensor register
+**
+** \details
+**
+** \return    Data read into the given register
+**************************************************************************************/
 uint8_t
 read_reg (
-          uint8_t reg)
+          uint8_t reg)      /**< Sensor Register to read */
 {
   uint8_t data;
   SensorRead (reg, &data, 1);
   return data;
 }
 
+
+/**
+** Writes a sigle sensor register
+**
+** \details
+**
+** \return    Nothing
+**************************************************************************************/
 void
 write_reg (
-           uint8_t reg,
-           uint8_t data)
+           uint8_t reg,         /**< register to write */
+           uint8_t data)        /**< data to write */
 {
 
   uint8_t data_buffer[2];

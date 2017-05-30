@@ -116,54 +116,108 @@ SensorWrite (
              uint8_t regadd, /**< Register Address  */
              uint8_t *data, /**< Data buffer  */
              uint n_bytes); /**< Number of bytes to write */
-
+/**
+** Takes a distance measurement from sensor
+**
+** \details
+**
+** \return    Measured distance in mm
+**************************************************************************************/
 extern
 uint32_t
 SensorMeasure (
                void);
+/**
+** Measure distance using phase correction
+**
+** \details
+**
+** \return    measured distance in mm
+**************************************************************************************/
 extern
 uint32_t SensorMeasureF (void);
 
-
+/**
+** Performs crosstalk calibration procedure
+**
+** \details
+** requires that user blocks the photo diode from receiving any light
+** \return    Nothing
+**************************************************************************************/
 extern
 void
 SensorCrossTalkCal (
                     void);
-
+/**
+** Magnitude Calibration Procedure
+**
+** \details
+**  No action for the user us required
+** \return    Nothing
+**************************************************************************************/
 extern
 void
 SensorMagitudeCal (
                    void);
 
+/**
+** Performs distance calibration procedure,
+**
+** \details
+**  this function requires that user place an object to a predefine distance: REF_DIST
+** \return    Nothing
+**************************************************************************************/
 extern
 void
 SensorDistanceCal (
                    void);
 
-extern
-void
-SensorDistCal2 (
-                void);
 
 
+/**
+** Method converts 3 signed bytes in format {Exp,MSB,LSB} to a double
+**
+** \details
+**
+** \return    Converted Double
+**************************************************************************************/
 extern
 double
 Bytes2Double3S (
                 uint8_t exp,
                 uint8_t msb,
                 uint8_t lsb);
-
+/**
+** Method converts bytes in format {MSB,LSB} to a double
+**
+** \details
+**
+** \return    Nothing
+**************************************************************************************/
 extern
 double
 Bytes2Double2U (
                 uint8_t msb,
                 uint8_t lsb);
+/**
+** Method converts a double to 2 bytes {MSB,LSB}
+**
+** \details
+**
+** \return    Nothing
+**************************************************************************************/
 extern
 void
 Double2Bytes2U (
                 double dNum,
                 uint8_t* baResult);
-
+/**
+** Method converts a double to 3 bytes with signed mantissa {Exp,MSB,LSB}
+**
+** \details
+**
+** \return    Nothing
+**************************************************************************************/
 extern
 void
 Double2Bytes3S (
