@@ -383,7 +383,6 @@ done:
 
 int XNUCLEO53L0A1_Init(void) {
     int status = 0;
-    uint8_t ExpanderData[2];
     XNUCLEO53L0A1_USART2_UART_Init();
     XNUCLEO53L0A1_I2C1Configure();
 
