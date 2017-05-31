@@ -51,7 +51,7 @@
 **====================================================================================
 */
 
-#define REF_DIST 0.300f
+#define REF_DIST 0.300f                 /**<Calibration distance in meters*/
 #define M_PI_F 3.14159265358979323846f
 #define DEFAULT_CAL_DIST_VALUES  1      /**< If set , Distance calibration values are loaded with default values */
 
@@ -63,6 +63,8 @@
 
 /**
  * Sensor command type
+ * \brief
+ *
  */
 
 typedef struct
@@ -488,7 +490,7 @@ SensorCrossTalkCal (
 ** Performs distance calibration procedure,
 **
 ** \details
-**  this function requires that user place an object to a predefine distance: REF_DIST
+**  this function requires that user place an object to a predefine distance: #REF_DIST
 ** \return    Nothing
 **************************************************************************************/
 void
@@ -703,6 +705,21 @@ write_reg (
 
 
   (void) HAL_I2C_Master_Transmit (&XNUCLEO53L0A1_hi2c, ISL29501_I2C_ADDRESS, data_buffer, 2u, 100);
+
+}
+
+/**
+ ** My function brief description
+ **
+ ** \details Details about my function
+ **
+ ** \return    Nothing
+ **************************************************************************************/
+void
+myfunction (
+            uint8_t para1,      /**< parameter 1 description */
+            uint8_t para2)      /**< parameter 2 description */
+{
 
 }
 
