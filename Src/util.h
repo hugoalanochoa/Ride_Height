@@ -70,6 +70,9 @@
 **====================================================================================
 */
 
+/**< Stops the CPU as a break point */
+#define __debug()         __ASM volatile("BKPT #01");
+
 /**< Get the count of items in an array */
 #define COUNT_OF(array)           ((sizeof(array)) / (sizeof((array)[0])))
 
